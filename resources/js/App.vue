@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { api, base, download } from './api';
 import type { Bucket, Doctor, Run, Sample, Scenario } from './types';
 import Traffic from './Traffic.vue';
@@ -20,6 +20,21 @@ const sampleDrops = computed(() => summary.value?.samples_dropped ?? buckets.val
 const p95 = computed(() => summary.value?.latency.p95_ms ?? latest.value?.latency.p95_ms);
 const currentModes = computed(() => doctor.value?.engines.find(e => e.name === form.value.engine)?.modes ?? ['fixed-vus', 'ramping-vus', 'spike']);
 let timer: ReturnType<typeof setTimeout> | undefined, stopped = false, cursor = 0, selectedGeneration = 0;
+let previousFocus: HTMLElement | null = null;
+watch(inspector, async (sample) => {
+  if (sample) { previousFocus = document.activeElement as HTMLElement | null; await nextTick(); document.querySelector<HTMLElement>('.inspector')?.focus(); }
+  else previousFocus?.focus();
+});
+function inspectorKeyboard(event: KeyboardEvent) {
+  if (!inspector.value) return;
+  if (event.key === 'Escape') { inspector.value = null; return; }
+  if (event.key !== 'Tab') return;
+  const buttons = Array.from(document.querySelectorAll<HTMLElement>('.inspector button, .inspector a[href], .inspector input'));
+  if (!buttons.length) return;
+  const index = buttons.indexOf(document.activeElement as HTMLElement);
+  if (event.shiftKey && index <= 0) { event.preventDefault(); buttons.at(-1)?.focus(); }
+  else if (!event.shiftKey && (index < 0 || index === buttons.length - 1)) { event.preventDefault(); buttons[0].focus(); }
+}
 function number(value: unknown, digits = 0): string { return typeof value === 'number' ? value.toLocaleString(undefined, { maximumFractionDigits: digits }) : '—'; }
 function terminal(status: string): boolean { return ['completed', 'cancelled', 'failed'].includes(status); }
 async function action(fn: () => Promise<void>) { error.value = ''; notice.value = ''; busy.value = true; try { await fn(); } catch (e) { error.value = e instanceof Error ? e.message : 'The operation failed.'; } finally { busy.value = false; } }
@@ -55,9 +70,9 @@ function loadJourney() {
     { name: 'checkout', method: 'POST', path: '/api/orders', json: { product_id: 1 }, expected_status: [201], extract: { orderId: { source: 'json', path: 'id' } } },
   ] }; editor.value = JSON.stringify(form.value, null, 2); advanced.value = true;
 }
-function loadSaved(scenario: Scenario) { form.value = structuredClone(scenario); editor.value = JSON.stringify(form.value, null, 2); advanced.value = true; }
-onMounted(async () => { await action(async () => { saved.value = await api('scenarios'); await refresh(); }); void poll(); });
-onUnmounted(() => { stopped = true; clearTimeout(timer); });
+function loadSaved(scenario: Scenario) { form.value = JSON.parse(JSON.stringify(scenario)) as Scenario; editor.value = JSON.stringify(form.value, null, 2); advanced.value = true; }
+onMounted(async () => { document.addEventListener('keydown', inspectorKeyboard); await action(async () => { saved.value = await api('scenarios'); await refresh(); }); void poll(); });
+onUnmounted(() => { document.removeEventListener('keydown', inspectorKeyboard); stopped = true; clearTimeout(timer); });
 </script>
 
 <template>

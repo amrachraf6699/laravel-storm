@@ -10,8 +10,8 @@ use AmrAchraf\LaravelStorm\Runs\RunContext;
 use AmrAchraf\LaravelStorm\Scenarios\Journey;
 use AmrAchraf\LaravelStorm\Security\TargetPolicy;
 use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Cookie\CookieJar;
-use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Handler\CurlMultiHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Utils;
@@ -65,9 +65,8 @@ final class PhpEngine implements LoadEngine
                 $step = $config['steps'][$stepIndex];
                 $variables = $users[$vu]['variables'];
                 $path = $journey->interpolate($step['path'], $variables, true);
-                $options = ['headers' => $journey->interpolate($step['headers'] ?? [], $variables), 'cookies' => $users[$vu]['cookies'], 'timeout' => $step['timeout'], 'connect_timeout' => min(5, $step['timeout']), 'curl' => [CURLOPT_RESOLVE => [$target['host'].':'.$target['port'].':'.(str_contains($target['ip'], ':') ? '['.$target['ip'].']' : $target['ip'])], CURLOPT_NOPROGRESS => false, CURLOPT_XFERINFOFUNCTION => function ($handle, $downloadTotal, $downloaded) use ($context): int {
-                    return $downloadTotal > $context->settings['security']['max_response_bytes'] || $downloaded > $context->settings['security']['max_response_bytes'] ? 1 : 0;
-                }]];
+                $options = ['headers' => $journey->interpolate($step['headers'] ?? [], $variables), 'cookies' => $users[$vu]['cookies'], 'timeout' => $step['timeout'], 'connect_timeout' => min(5, $step['timeout']), 'curl' => [CURLOPT_RESOLVE => [$target['host'].':'.$target['port'].':'.(str_contains($target['ip'], ':') ? '['.$target['ip'].']' : $target['ip'])]]];
+                $options = $this->limitResponse($options, $context->settings['security']['max_response_bytes'], ClientInterface::MAJOR_VERSION);
                 if (isset($step['json'])) {
                     $options['json'] = $journey->interpolate($step['json'], $variables);
                 }
@@ -81,6 +80,8 @@ final class PhpEngine implements LoadEngine
                 $transfer = new TransferTiming;
                 $options['on_stats'] = function (TransferStats $stats) use ($transfer) {
                     $raw = $stats->getHandlerStats();
+                    $errorData = $stats->getHandlerErrorData();
+                    $transfer->errorNumber = is_int($errorData) ? $errorData : null;
                     $transfer->timings = ['duration_ms' => $stats->getTransferTime() * 1000, 'connect_ms' => ($raw['connect_time'] ?? 0) * 1000, 'ttfb_ms' => ($raw['starttransfer_time'] ?? 0) * 1000];
                 };
                 $users[$vu]['busy'] = true;
@@ -112,9 +113,8 @@ final class PhpEngine implements LoadEngine
                     $context->observe($event);
                     $this->advance($users[$vu], $config, $step, $context->elapsed());
                     unset($promises[$vu]);
-                }, function ($error) use (&$users, &$promises, $vu, $step, $config, $context, $began) {
-                    $handler = $error instanceof TransferException && method_exists($error, 'getHandlerContext') ? $error->getHandlerContext() : [];
-                    $context->observe(['method' => $step['method'], 'endpoint' => explode('?', $step['path'])[0], 'step' => $step['name'], 'virtual_user' => $vu, 'status_code' => null, 'duration_ms' => (hrtime(true) - $began) / 1e6, 'error_type' => ($handler['errno'] ?? null) === CURLE_OPERATION_TIMEDOUT ? 'timeout' : 'transport']);
+                }, function ($error) use (&$users, &$promises, $vu, $step, $config, $context, $began, $transfer) {
+                    $context->observe(['method' => $step['method'], 'endpoint' => explode('?', $step['path'])[0], 'step' => $step['name'], 'virtual_user' => $vu, 'status_code' => null, 'duration_ms' => (hrtime(true) - $began) / 1e6, 'error_type' => $transfer->errorNumber === CURLE_OPERATION_TIMEDOUT ? 'timeout' : 'transport']);
                     $users[$vu]['step'] = count($config['steps']) - 1;
                     $this->advance($users[$vu], $config, $step, $context->elapsed());
                     unset($promises[$vu]);
@@ -147,6 +147,18 @@ final class PhpEngine implements LoadEngine
         }
         $user['ready'] = $elapsed + $step['think_time'];
         $user['busy'] = false;
+    }
+
+    private function limitResponse(array $options, int $bytes, int $guzzleMajor): array
+    {
+        if ($guzzleMajor >= 8) {
+            $options['progress'] = fn ($total, $downloaded): bool => $total > $bytes || $downloaded > $bytes;
+        } else {
+            $options['curl'][CURLOPT_NOPROGRESS] = false;
+            $options['curl'][CURLOPT_XFERINFOFUNCTION] = fn ($handle, $total, $downloaded): int => $total > $bytes || $downloaded > $bytes ? 1 : 0;
+        }
+
+        return $options;
     }
 
     public function desiredUsers(array $load, float $elapsed): int

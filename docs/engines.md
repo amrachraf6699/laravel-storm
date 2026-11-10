@@ -1,6 +1,6 @@
 # Engines and supervision
 
-The PHP engine uses Guzzle/cURL multi asynchronous I/O. It does not launch a process per VU. A VU executes one step at a time; think time and multiple steps mean configured VUs are not equal to in-flight concurrency. Successful responses, failures, and observed timings are aggregated before sampling. There are no automatic application-level retries or redirect following.
+The PHP engine supports Guzzle 7.9+ and 8.3+ using cURL multi asynchronous I/O. It does not launch a process per VU. A VU executes one step at a time; think time and multiple steps mean configured VUs are not equal to in-flight concurrency. Successful responses, failures, and observed timings are aggregated before sampling. There are no automatic application-level retries or redirect following.
 
 The optional k6 engine generates a data-only script for verified **k6 2.3.0**. Obtain the binary from [Grafana's release](https://github.com/grafana/k6/releases/tag/v2.3.0), verify its checksum, and put it on PATH or set `STORM_K6_BINARY`. The binary is not redistributed by Storm. Raw metric/sample files have disk quotas and are deleted after normal engine shutdown; pruning cleans interrupted artifacts.
 

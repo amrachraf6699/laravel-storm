@@ -17,7 +17,7 @@
         "ext-mbstring": "*",
         "ext-pdo": "*",
         "ext-pdo_sqlite": "*",
-        "guzzlehttp/guzzle": "^7.9",
+        "guzzlehttp/guzzle": "^7.9 || ^8.3",
         "illuminate/console": "^12.0 || ^13.0",
         "illuminate/contracts": "^12.0 || ^13.0",
         "illuminate/http": "^12.0 || ^13.0",

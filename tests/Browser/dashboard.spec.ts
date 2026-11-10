@@ -24,11 +24,17 @@ test('local authentication, real run, inspector, exports and comparison', async 
     await expect(page.getByRole('button', { name: 'Start test' })).toBeEnabled({ timeout: 15000 });
     await page.getByRole('button', { name: 'Save scenario' }).click();
     await expect(page.getByRole('status')).toContainText('Scenario saved');
+    await page.getByRole('button', { name: /Browser verification.*php/ }).last().click();
+    await expect(page.getByLabel('Versioned scenario JSON')).toHaveValue(/Browser verification/);
     await page.getByRole('button', { name: 'Start test' }).click();
     await expect(page.locator('.run-strip .status')).toHaveText('completed', { timeout: 30000 });
     await expect(page.locator('.stats article strong').first()).not.toHaveText('0');
     await page.getByRole('button', { name: 'Inspect', exact: false }).first().click();
     await expect(page.getByRole('dialog')).toContainText('products');
+    await expect(page.getByRole('dialog')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await page.getByRole('button', { name: 'Inspect', exact: false }).first().click();
     await page.getByRole('button', { name: 'Close inspector', exact: true }).last().click();
     await page.screenshot({ path: '.cache/dashboard-run.png', fullPage: true });
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: 'Export report' }).click()]);

@@ -22,6 +22,8 @@ For a remote target, configure `STORM_DIAGNOSTICS_RELAY_URL` to the generator's 
 
 Spool/ingestion failures drop diagnostic samples without failing application requests. Compare instrumentation on/off against controlled fixtures and record external CPU/network telemetry; sampled duration is not system-wide root-cause proof. Process peak memory in persistent workers is not a request-exclusive peak.
 
+For a reproducible development microbenchmark, run `php tools/benchmark-diagnostics.php` from this repository. It compares unsigned middleware requests with 1% signed samples over five trials and reports observed overhead. It excludes HTTP/kernel/proxy costs and does not establish production overhead or target capacity.
+
 ## Body capture
 
 Set `capture.enabled=true`, configure a small explicit `capture.fields` allowlist, then opt the scenario into `capture: true`. Only small complete JSON and form bodies are parsed. The retained limit is 16 KiB or the configured smaller limit. Oversized, unsupported text, HTML, and binary bodies are omitted.
