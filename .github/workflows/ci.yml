@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP ${{ matrix.target.php }} / Laravel ${{ matrix.target.laravel }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        target:
+          - php: '8.2'
+            laravel: '12'
+            testbench: '10'
+          - php: '8.3'
+            laravel: '12'
+            testbench: '10'
+          - php: '8.4'
+            laravel: '12'
+            testbench: '10'
+          - php: '8.5'
+            laravel: '12'
+            testbench: '10'
+          - php: '8.3'
+            laravel: '13'
+            testbench: '11'
+          - php: '8.4'
+            laravel: '13'
+            testbench: '11'
+          - php: '8.5'
+            laravel: '13'
+            testbench: '11'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.target.php }}
+          extensions: curl, dom, mbstring, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Resolve supported Laravel
+        shell: pwsh
+        run: |
+          composer require --dev "orchestra/testbench:^${{ matrix.target.testbench }}.0" --no-update --no-interaction
+          composer update --prefer-dist --no-interaction
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install verified k6
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .cache/tools | Out-Null
+          $platform = if ($IsWindows) { 'windows-amd64.zip' } else { 'linux-amd64.tar.gz' }
+          $archive = "k6-v2.3.0-$platform"
+          Invoke-WebRequest "https://github.com/grafana/k6/releases/download/v2.3.0/$archive" -OutFile ".cache/tools/$archive"
+          Invoke-WebRequest 'https://github.com/grafana/k6/releases/download/v2.3.0/k6-v2.3.0-checksums.txt' -OutFile '.cache/tools/checksums.txt'
+          $expected = (Get-Content '.cache/tools/checksums.txt' | Where-Object { $_.EndsWith($archive) }).Split(' ')[0]
+          if ((Get-FileHash ".cache/tools/$archive" -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw 'k6 checksum mismatch' }
+          if ($IsWindows) { Expand-Archive ".cache/tools/$archive" '.cache/tools' } else { tar -xzf ".cache/tools/$archive" -C '.cache/tools' }
+          $folder = if ($IsWindows) { 'k6-v2.3.0-windows-amd64' } else { 'k6-v2.3.0-linux-amd64' }
+          (Resolve-Path ".cache/tools/$folder").Path | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Test package and real engines
+        shell: pwsh
+        env:
+          STORM_REQUIRE_K6: '1'
+        run: |
+          composer validate --strict
+          composer test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Protect private specification
+        shell: pwsh
+        run: |
+          $tracked = git ls-files -- LARAVEL_STORM_TECHNICAL_SPECIFICATION.md
+          if ($tracked) { throw 'Private specification is tracked' }
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, dom, mbstring, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction
+      - run: composer lint
+      - run: composer analyse
+      - run: composer audit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: git diff --exit-code -- dist
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-artifacts
+          path: test-results/
+          retention-days: 7

@@ -1,0 +1,16 @@
+/vendor/
+/node_modules/
+/.phpunit.cache/
+/.phpunit.result.cache
+/.cache/
+/composer.lock
+/.env
+/storage/
+/workbench/.env
+/workbench/vendor/
+/workbench/storage/
+/workbench/bootstrap/cache/
+/coverage/
+*.log
+/test-results/
+/playwright-report/

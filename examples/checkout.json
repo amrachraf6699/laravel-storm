@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "Fixture checkout journey",
+  "origin": "http://127.0.0.1:8000",
+  "engine": "php",
+  "steps": [
+    {"name": "csrf", "method": "GET", "path": "/login", "expected_status": [200], "extract": {"csrf": {"source": "css", "path": "input[name=\"_token\"]", "attribute": "value"}}},
+    {"name": "login", "method": "POST", "path": "/login", "form": {"email": "{{env.STORM_TEST_EMAIL}}", "password": "{{env.STORM_TEST_PASSWORD}}", "_token": "{{csrf}}"}, "expected_status": [302]},
+    {"name": "order", "method": "POST", "path": "/api/orders", "json": {"product_id": 1}, "expected_status": [201], "extract": {"orderId": {"source": "json", "path": "id"}}, "think_time": 0.2},
+    {"name": "receipt", "method": "GET", "path": "/api/orders/{{orderId}}", "expected_status": [200]}
+  ],
+  "workload": {"mode": "ramping-vus", "vus": 1, "max_vus": 10, "stages": [{"duration": "10s", "target": 5}, {"duration": "20s", "target": 10}, {"duration": "10s", "target": 0}], "rps_limit": 50},
+  "thresholds": [{"metric": "p95_ms", "operator": "lt", "value": 1000, "stage": 1}],
+  "capture": false,
+  "diagnostics": false
+}

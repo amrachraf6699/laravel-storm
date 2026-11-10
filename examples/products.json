@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "Products listing",
+  "origin": "http://127.0.0.1:8000",
+  "engine": "php",
+  "steps": [{"name": "products", "method": "GET", "path": "/api/products", "expected_status": [200]}],
+  "workload": {"mode": "fixed-vus", "vus": 10, "max_vus": 50, "duration": "30s", "rps_limit": 100},
+  "thresholds": [{"metric": "p95_ms", "operator": "lt", "value": 500}, {"metric": "http_error_rate", "operator": "lt", "value": 0.01}],
+  "capture": false,
+  "diagnostics": false,
+  "environment": {"deployment": "local", "dataset": "fixtures"}
+}
