@@ -12,10 +12,16 @@ Laravel-native load testing with a PHP engine, optional Grafana k6, a live Vue d
 
 | Framework | PHP | Platforms |
 |---|---|---|
+| Laravel 10 | 8.2–8.3 | Windows, Linux |
+| Laravel 11 | 8.2–8.4 | Windows, Linux |
 | Laravel 12 | 8.2–8.5 | Windows, Linux |
 | Laravel 13 | 8.3–8.5 | Windows, Linux |
 
 Requires cURL, DOM, mbstring, PDO SQLite, writable private storage, and process spawning. k6 **2.3.0** is optional and installed separately. Consumers do not need Node, Redis, queues, or database migrations in their application's primary database.
+
+Laravel 10 support requires PHP 8.2 or newer, even though the framework itself also runs on PHP 8.1. Compatibility covers the latest patch releases of Laravel 10–13; future major versions need validation before they are added.
+
+Laravel 10 and 11 have reached [upstream end of security support](https://laravel.com/docs/13.x/releases#support-policy). Storm compatibility does not fix framework vulnerabilities. Composer may block their installation because of framework advisories; Storm does not disable those checks.
 
 ## Quick start
 

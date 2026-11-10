@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.1
+
+- Add Laravel 10 and 11 compatibility while retaining the PHP 8.2 minimum.
+- Allow Symfony 6.4 dependencies and compatible Testbench/PHPUnit versions for Laravel 10.
+- Expand Windows/Linux CI coverage to Laravel 10–13 and document the tested PHP combinations.
+
 ## v0.1.0
 
 Initial Laravel 12/13 release for Windows and Linux.

@@ -19,6 +19,21 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         target:
           - php: '8.2'
+            laravel: '10'
+            testbench: '8'
+          - php: '8.3'
+            laravel: '10'
+            testbench: '8'
+          - php: '8.2'
+            laravel: '11'
+            testbench: '9'
+          - php: '8.3'
+            laravel: '11'
+            testbench: '9'
+          - php: '8.4'
+            laravel: '11'
+            testbench: '9'
+          - php: '8.2'
             laravel: '12'
             testbench: '10'
           - php: '8.3'
@@ -54,6 +69,15 @@ jobs:
         shell: pwsh
         run: |
           composer require --dev "orchestra/testbench:~${{ matrix.target.testbench }}.0" --no-update --no-interaction
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ([int]'${{ matrix.target.laravel }}' -lt 12) {
+            # Isolated compatibility tests for EOL frameworks; keep audit reporting enabled.
+            # This exception never ships in the package or changes consumer settings.
+            $manifest = Get-Content composer.json -Raw | ConvertFrom-Json
+            $policy = @{ advisories = @{ ignore = @{ 'laravel/framework' = @{ constraint = '^10.0 || ^11.0'; 'on-audit' = $false; reason = 'Isolated legacy compatibility tests only; framework advisories remain reportable.' } } } }
+            $manifest.config | Add-Member -NotePropertyName policy -NotePropertyValue $policy
+            [System.IO.File]::WriteAllText((Join-Path (Get-Location) 'composer.json'), ($manifest | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($false))
+          }
           composer update --prefer-dist --no-interaction
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Install verified k6

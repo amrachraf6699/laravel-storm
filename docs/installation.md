@@ -1,5 +1,7 @@
 # Installation
 
+Supports Laravel 10–13 on Windows and Linux. Storm requires PHP 8.2+; Laravel 13 requires PHP 8.3+. Laravel 10 applications running PHP 8.1 must upgrade PHP before installing Storm. See the [requirements matrix](../README.md#requirements) for tested PHP versions.
+
 Install with Composer as a development dependency, run `storm:install`, and set `STORM_ENABLED=true`. The service provider and commands are discovered automatically. Installation publishes configuration and initializes `storage/storm/storm.sqlite`; it does not run host database migrations.
 
 The package remains inactive when disabled. Application configuration caching applies normally: clear/rebuild it after changing environment settings.
