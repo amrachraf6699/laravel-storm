@@ -26,7 +26,7 @@ test('local authentication, real run, inspector, exports and comparison', async 
     await expect(page.getByRole('status')).toContainText('Scenario saved');
     await page.getByRole('button', { name: 'Start test' }).click();
     await expect(page.locator('.run-strip .status')).toHaveText('completed', { timeout: 30000 });
-    await expect(page.locator('.stats article').first()).not.toContainText('0Actual');
+    await expect(page.locator('.stats article strong').first()).not.toHaveText('0');
     await page.getByRole('button', { name: 'Inspect', exact: false }).first().click();
     await expect(page.getByRole('dialog')).toContainText('products');
     await page.getByRole('button', { name: 'Close inspector', exact: true }).last().click();

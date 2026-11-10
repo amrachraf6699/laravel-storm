@@ -101,8 +101,14 @@ final class PhpEngine implements LoadEngine
                         $event['extraction_failed'] = true;
                         $users[$vu]['step'] = count($config['steps']) - 1;
                     }
-                    $event['request_body'] = $context->redactor->body($requestBody, isset($step['json']) ? 'application/json' : 'application/x-www-form-urlencoded', $config['capture']);
-                    $event['response_body'] = $context->redactor->body($body, $response->getHeaderLine('Content-Type'), $config['capture']);
+                    $captureRedactor = clone $context->redactor;
+                    foreach ($users[$vu]['variables'] as $variable) {
+                        $captureRedactor->registerSecret((string) $variable);
+                    }
+                    $event['headers'] = $captureRedactor->headers($response->getHeaders());
+                    $capture = $config['capture'] && ! isset($event['extraction_failed']);
+                    $event['request_body'] = $captureRedactor->body($requestBody, isset($step['json']) ? 'application/json' : 'application/x-www-form-urlencoded', $capture);
+                    $event['response_body'] = $captureRedactor->body($body, $response->getHeaderLine('Content-Type'), $capture);
                     $context->observe($event);
                     $this->advance($users[$vu], $config, $step, $context->elapsed());
                     unset($promises[$vu]);

@@ -106,7 +106,9 @@ export default function () {
       const safeHeaders = {};
       for (const [key, value] of Object.entries(response.headers)) if (settings.capture.headers.includes(key.toLowerCase()) && !sensitive(key)) safeHeaders[key.toLowerCase()] = clean(value);
       const event = { method: step.method, endpoint: step.path.split('?')[0], step: step.name, virtual_user: exec.vu.idInTest, trace_id: traceId, elapsed_ms: exec.instance.currentTestRunDuration, status_code: status, expected: expected && !extractionFailed, duration_ms: response.timings.duration, error_type: tags.error_type || null, extraction_failed: extractionFailed, headers: safeHeaders, request_body: capture(body, headers['Content-Type'] || ''), response_body: capture(response.body, response.headers['Content-Type'] || ''), timings: { waiting_ms: response.timings.waiting, receiving_ms: response.timings.receiving } };
-      console.log(JSON.stringify({ storm_sample: clean(event) }));
+      const sanitized = clean(event);
+      sanitized.trace_id = traceId;
+      console.log(JSON.stringify({ storm_sample: sanitized }));
     }
     if (!status || extractionFailed) break;
     if (step.think_time) sleep(step.think_time);

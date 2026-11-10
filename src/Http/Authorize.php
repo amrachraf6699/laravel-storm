@@ -17,6 +17,10 @@ final class Authorize
             return $request->expectsJson() ? response()->json(['message' => 'Storm authorization required.'], 403) : redirect()->route('storm.login');
         }
 
-        return $next($request);
+        $response = $next($request);
+        $response->headers->set('Cache-Control', 'no-store');
+        $response->headers->set('X-Frame-Options', 'DENY');
+
+        return $response;
     }
 }

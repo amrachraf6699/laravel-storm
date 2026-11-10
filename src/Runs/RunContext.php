@@ -112,7 +112,7 @@ final class RunContext
         $bucket->counts[$counter]++;
         if ($keep) {
             $this->sampleCount++;
-            $event = $this->redactor->clean($event);
+            $event = $this->redactor->event($event);
             $this->store->sample($this->id, ['schema_version' => 1, 'sample_id' => bin2hex(random_bytes(8)), 'engine' => $this->configuration->engine(), 'timestamp' => gmdate('c'), 'elapsed_second' => (int) $this->elapsed(), 'stage' => $this->stage()] + $event, $this->settings['metrics']['max_samples_per_run']);
         }
         $this->tick();
@@ -136,7 +136,7 @@ final class RunContext
         $bucket->counts['samples_retained']++;
         $this->total->counts['samples_dropped'] = max(0, $this->total->counts['samples_dropped'] - 1);
         $bucket->counts['samples_dropped'] = max(0, $bucket->counts['samples_dropped'] - 1);
-        $this->store->sample($this->id, ['schema_version' => 1, 'engine' => 'k6', 'sample_id' => bin2hex(random_bytes(8)), 'timestamp' => gmdate('c'), 'elapsed_second' => (int) $sampleElapsed] + $this->redactor->clean($event), $this->settings['metrics']['max_samples_per_run']);
+        $this->store->sample($this->id, ['schema_version' => 1, 'engine' => 'k6', 'sample_id' => bin2hex(random_bytes(8)), 'timestamp' => gmdate('c'), 'elapsed_second' => (int) $sampleElapsed] + $this->redactor->event($event), $this->settings['metrics']['max_samples_per_run']);
     }
 
     public function warn(string $message): void

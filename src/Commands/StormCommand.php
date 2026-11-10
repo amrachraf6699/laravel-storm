@@ -54,7 +54,7 @@ final class StormCommand extends Command
 
             return match ($this->operation) {
                 'install' => $this->installStorm($store),
-                'doctor' => $this->outputJson($doctor->report()),
+                'doctor' => $this->outputJson($doctor->report(true)),
                 'login' => $this->login(),
                 'serve' => $this->serve($manager),
                 'test' => $this->testRun($store, $manager),

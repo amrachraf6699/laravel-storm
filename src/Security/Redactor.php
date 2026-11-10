@@ -61,6 +61,17 @@ final class Redactor
         return $out;
     }
 
+    public function event(array $event): array
+    {
+        $safe = $this->clean($event);
+        // Correlation IDs are random identifiers, never interpolated credentials.
+        if (isset($event['trace_id']) && preg_match('/^[A-Za-z0-9_-]{8,64}$/', $event['trace_id'])) {
+            $safe['trace_id'] = $event['trace_id'];
+        }
+
+        return $safe;
+    }
+
     public function body(string $body, string $contentType, bool $enabled): ?array
     {
         if (! $enabled || ! ($this->capture['enabled'] ?? false)) {

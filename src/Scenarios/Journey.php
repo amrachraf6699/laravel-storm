@@ -9,7 +9,12 @@ use Symfony\Component\DomCrawler\Crawler;
 
 final class Journey
 {
-    public function __construct(private array $environment, private Redactor $redactor) {}
+    public function __construct(private array $environment, private Redactor $redactor)
+    {
+        foreach ($environment as $value) {
+            $redactor->registerSecret((string) $value);
+        }
+    }
 
     public function interpolate(mixed $value, array $variables, bool $encode = false): mixed
     {
@@ -27,7 +32,6 @@ final class Journey
                 throw new RuntimeException('A referenced journey variable is missing.');
             }
             $result = (string) $source[$key];
-            $this->redactor->registerSecret($result);
 
             return $encode ? rawurlencode($result) : $result;
         }, $value);
@@ -47,7 +51,6 @@ final class Journey
                 throw new RuntimeException('Response extraction failed or exceeded its size limit.');
             }
             $variables[$name] = (string) $value;
-            $this->redactor->registerSecret((string) $value);
         }
 
         return $variables;
