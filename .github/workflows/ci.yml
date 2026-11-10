@@ -74,6 +74,10 @@ jobs:
             # Isolated compatibility tests for EOL frameworks; keep audit reporting enabled.
             # This exception never ships in the package or changes consumer settings.
             $manifest = Get-Content composer.json -Raw | ConvertFrom-Json
+            if ([int]'${{ matrix.target.laravel }}' -eq 10) {
+              $manifest.require.'symfony/css-selector' = '~6.4'
+              $manifest.require.'symfony/dom-crawler' = '~6.4'
+            }
             $policy = @{ advisories = @{ ignore = @{ 'laravel/framework' = @{ constraint = '^10.0 || ^11.0'; 'on-audit' = $false; reason = 'Isolated legacy compatibility tests only; framework advisories remain reportable.' } } } }
             $manifest.config | Add-Member -NotePropertyName policy -NotePropertyValue $policy
             [System.IO.File]::WriteAllText((Join-Path (Get-Location) 'composer.json'), ($manifest | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($false))
