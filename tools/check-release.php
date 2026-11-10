@@ -12,16 +12,15 @@ foreach (['dist/storm.js', 'dist/storm.css', 'LICENSE', 'README.md', 'THIRD_PART
         throw new RuntimeException('Missing release artifact: '.$required);
     }
 }
-$private = 'LARAVEL_STORM_TECHNICAL_SPECIFICATION.md';
-$process = proc_open(['git', 'ls-files', '--', $private], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root);
+$process = proc_open(['git', 'ls-files'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root);
 if (! is_resource($process)) {
     throw new RuntimeException('Cannot inspect Git index.');
 }
 $tracked = stream_get_contents($pipes[1]);
 fclose($pipes[1]);
 fclose($pipes[2]);
-if (proc_close($process) !== 0 || trim($tracked) !== '') {
-    throw new RuntimeException('Private specification must remain untracked.');
+if (proc_close($process) !== 0 || preg_match('~(^|/)(\.env|vendor|node_modules|storm\.sqlite)(/|$)~m', $tracked)) {
+    throw new RuntimeException('Forbidden file in Git index.');
 }
 if (isset($argv[1])) {
     $zip = new ZipArchive;
@@ -30,10 +29,10 @@ if (isset($argv[1])) {
     }
     for ($index = 0; $index < $zip->numFiles; $index++) {
         $name = $zip->getNameIndex($index);
-        if (str_contains($name, $private) || preg_match('~(^|/)(\.env|vendor|node_modules|storm\.sqlite)(/|$)~', $name)) {
+        if (preg_match('~(^|/)(\.env|vendor|node_modules|storm\.sqlite)(/|$)~', $name)) {
             throw new RuntimeException('Forbidden file in release archive.');
         }
     }
     $zip->close();
 }
-echo "Release metadata, assets and private-file checks passed.\n";
+echo "Release metadata, assets and artifact checks passed.\n";

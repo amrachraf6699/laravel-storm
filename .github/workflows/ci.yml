@@ -77,11 +77,8 @@ jobs:
           composer validate --strict
           composer test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Protect private specification
-        shell: pwsh
-        run: |
-          $tracked = git ls-files -- LARAVEL_STORM_TECHNICAL_SPECIFICATION.md
-          if ($tracked) { throw 'Private specification is tracked' }
+      - name: Check release artifacts
+        run: php tools/check-release.php
 
   quality:
     runs-on: ubuntu-latest
